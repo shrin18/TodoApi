@@ -7,11 +7,14 @@ namespace TodoApi
     using System.Threading;
     using System.Threading.Tasks;
     using System.Xml.Linq;
+    using System.Text;
+    using Newtonsoft.Json;
+    using System.Data.SqlClient;
 
     internal static class Program
     {
-        static string StorageAccountName = "accountname";
-        static string StorageAccountKey = "key";
+        static string StorageAccountName = "sigmaiot";
+        static string StorageAccountKey = "3Vupif/boWGadEZ9eJOt7JysQDgxuKp35grvjPw0Vd4=";
 
         private static void Main()
         {
@@ -38,6 +41,7 @@ namespace TodoApi
 
             using (var client = new HttpClient(handler))
             {
+
                 var response = await client.GetAsync($"https://sigmaiotexercisetest.blob.core.windows.net/api/v1/devices/testdevice/data/2018-09-18/temperature");
 
                 var result = await response.Content.ReadAsStringAsync();
