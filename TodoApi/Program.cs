@@ -48,7 +48,7 @@ namespace TodoApi
                 // Add the request headers for x-ms-date and x-ms-version.
                 DateTime now = DateTime.UtcNow;
                 httpRequestMessage.Headers.Add("x-ms-date", now.ToString("R", CultureInfo.InvariantCulture));
-                httpRequestMessage.Headers.Add("x-ms-version", "2017-04-17");
+                httpRequestMessage.Headers.Add("x-ms-version", "2018-09-18");
                 // If you need any additional headers, add them here before creating
                 //   the authorization header. 
 
