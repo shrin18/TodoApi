@@ -10,8 +10,8 @@ namespace TodoApi
 
     internal static class Program
     {
-        static string StorageAccountName = "sigmaiot";
-        static string StorageAccountKey = "3Vupif/boWGadEZ9eJOt7JysQDgxuKp35grvjPw0Vd4=";
+        static string StorageAccountName = "accountname";
+        static string StorageAccountKey = "key";
 
         private static void Main()
         {
