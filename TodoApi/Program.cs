@@ -1,4 +1,4 @@
-namespace StorageRestApiAuth
+namespace TodoApi
 {
     using System;
     using System.Globalization;
@@ -12,7 +12,7 @@ namespace StorageRestApiAuth
     {
         static string StorageAccountName = "YOURSTORAGEACCOUNTNAME";
         static string StorageAccountKey = "YOURSTORAGEACCOUNTKEY";
-        
+
         private static void Main()
         {
             // List the containers in a storage account.
