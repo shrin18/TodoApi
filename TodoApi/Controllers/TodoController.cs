@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -29,7 +29,7 @@ namespace TodoApi.Controllers
         }
 
         // GET: api/Todo
-        [HttpGet]
+        [HttpGet("/api/v1/devices/testdevice/data/api-version/sensortype")]
         public async Task<ActionResult<IEnumerable<TodoItem>>> GetTodoItem()
         {
             return await _context.TodoItems.ToListAsync();
