@@ -17,6 +17,7 @@ namespace TodoApi
         static string StorageAccountName = "sigmaiot";
         static string StorageAccountKey = "3Vupif/boWGadEZ9eJOt7JysQDgxuKp35grvjPw0Vd4=";
         static string deviceId = "testdevice";
+        static string sensorType = "Temperature";
         
 
         private static void Main()
@@ -53,7 +54,7 @@ namespace TodoApi
             }
             // Construct the URI. This will look like this:
             //   https://myaccount.blob.core.windows.net/resource
-            String uri = string.Format("http://{0}.blob.core.windows.net/api/v1/devices/{1}/2018-09-18/Temperature", storageAccountName, deviceId);
+            String uri = string.Format("http://{0}.blob.core.windows.net/api/v1/devices/{1}/2018-09-18/{2}", storageAccountName, deviceId, sensorType);
             // Set this to whatever payload you desire. Ours is null because 
             //   we're not passing anything in.
             Byte[] requestPayload = null;
