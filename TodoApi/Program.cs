@@ -10,17 +10,16 @@ namespace TodoApi.AzureBlobStorage
 {
     class Program
     {
-        private static string ACCOUNT_NAME = ConfigurationManager.AppSettings["accountName"];
-        private static string STORAGE_ACCOUNT_KEY = ConfigurationManager.AppSettings["accountKey"];
-        private static string STORAGE_ENDPOINT = "https://" + ConfigurationManager.AppSettings["accountName"] + ".blob.core.windows.net/";
-        private static string CONTAINER = ConfigurationManager.AppSettings["container"];
-        private static string BLOB_NAME = ConfigurationManager.AppSettings["blobName"];
+        private static string accountname = ConfigurationManager.AppSettings["accountName"];
+        private static string accountkey = ConfigurationManager.AppSettings["accountKey"];
+        private static string endpoint = "https://" + ConfigurationManager.AppSettings["accountName"] + ".blob.core.windows.net/";
+        private static string container = ConfigurationManager.AppSettings["container"];
+        private static string blobname = ConfigurationManager.AppSettings["blobName"];
 
         static void Main(string[] args)
         {
-            PutBlob(CONTAINER, BLOB_NAME);
-
-            ListBlobs(CONTAINER);
+            PutBlob(container, blobname);
+            ListBlobs(container);
         }
 
         /// <summary>
@@ -49,7 +48,7 @@ namespace TodoApi.AzureBlobStorage
                     dateInRfc1123Format,
                     storageServiceVersion);
 
-            var canonicalizedResource = String.Format("/{0}/{1}", ACCOUNT_NAME, urlPath);
+            var canonicalizedResource = String.Format("/{0}/{1}", accountname, urlPath);
 
             var stringToSign = String.Format("{0}\n\n\n{1}\n\n\n\n\n\n\n\n\n{2}\n{3}",
                     requestMethod,
@@ -59,7 +58,7 @@ namespace TodoApi.AzureBlobStorage
 
             var authorizationHeader = CreateAuthorizationHeader(stringToSign);
 
-            var uri = new Uri(STORAGE_ENDPOINT + urlPath);
+            var uri = new Uri(endpoint + urlPath);
 
             var request = (HttpWebRequest)WebRequest.Create(uri);
 
@@ -102,7 +101,7 @@ namespace TodoApi.AzureBlobStorage
                     dateInRfc1123Format,
                     storageServiceVersion);
 
-            var canonicalizedResource = String.Format("/{0}/{1}{2}", ACCOUNT_NAME, containerName, "\ncomp:list\nrestype:container");
+            var canonicalizedResource = String.Format("/{0}/{1}{2}", accountname, containerName, "\ncomp:list\nrestype:container");
 
             var stringToSign = String.Format("{0}\n\n\n\n\n\n\n\n\n\n\n\n{1}\n{2}",
                     requestMethod,
@@ -111,7 +110,7 @@ namespace TodoApi.AzureBlobStorage
 
             var authorizationHeader = CreateAuthorizationHeader(stringToSign);
 
-            var uri = new Uri(STORAGE_ENDPOINT + containerName + "?" + urlPath);
+            var uri = new Uri(endpoint + containerName + "?" + urlPath);
 
             var request = (HttpWebRequest)WebRequest.Create(uri);
 
@@ -133,16 +132,13 @@ namespace TodoApi.AzureBlobStorage
             }
         }
 
-        /// <summary>
-        /// Método que cria o header authorization
-        /// </summary>
         /// <param name="canonicalizedString"></param>
         /// <returns></returns>
         public static String CreateAuthorizationHeader(String canonicalizedString)
         {
             string signature;
 
-            using (var hmacSha256 = new HMACSHA256(Convert.FromBase64String(STORAGE_ACCOUNT_KEY)))
+            using (var hmacSha256 = new HMACSHA256(Convert.FromBase64String(accountkey)))
             {
                 var dataToHmac = Encoding.UTF8.GetBytes(canonicalizedString);
                 signature = Convert.ToBase64String(hmacSha256.ComputeHash(dataToHmac));
@@ -152,7 +148,7 @@ namespace TodoApi.AzureBlobStorage
                 CultureInfo.InvariantCulture,
                 "{0} {1}:{2}",
                 "SharedKey",
-                ACCOUNT_NAME,
+                accountname,
                 signature
             );
 
