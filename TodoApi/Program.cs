@@ -1,97 +1,162 @@
-namespace TodoApi
+using System;
+using System.Configuration;
+using System.Globalization;
+using System.IO;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace TodoApi.AzureBlobStorage
 {
-    using System;
-    using System.Globalization;
-    using System.Net;
-    using System.Net.Http;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using System.Xml.Linq;
-    using System.Text;
-    using Newtonsoft.Json;
-    using System.Data.SqlClient;
-    using System.Collections.Generic;
-
-    internal static class Program
+    class Program
     {
-        static string StorageAccountName = "sigmaiot";
-        static string StorageAccountKey = "3Vupif/boWGadEZ9eJOt7JysQDgxuKp35grvjPw0Vd4=";
-        static string deviceId = "testdevice";
-        static string sensorType = "Temperature";
-        
+        private static string ACCOUNT_NAME = ConfigurationManager.AppSettings["accountName"];
+        private static string STORAGE_ACCOUNT_KEY = ConfigurationManager.AppSettings["accountKey"];
+        private static string STORAGE_ENDPOINT = "https://" + ConfigurationManager.AppSettings["accountName"] + ".blob.core.windows.net/";
+        private static string CONTAINER = ConfigurationManager.AppSettings["container"];
+        private static string BLOB_NAME = ConfigurationManager.AppSettings["blobName"];
 
-        private static void Main()
+        static void Main(string[] args)
         {
-            // List the containers in a storage account.
-            ListContainersAsyncREST(StorageAccountName, StorageAccountKey, CancellationToken.None).GetAwaiter().GetResult();
+            PutBlob(CONTAINER, BLOB_NAME);
 
-            Console.WriteLine("Press any key to continue.");
-            Console.ReadLine();
+            ListBlobs(CONTAINER);
         }
 
         /// <summary>
-        /// This is the method to call the REST API to retrieve a list of
-        /// containers in the specific storage account.
-        /// This will call CreateRESTRequest to create the request, 
-        /// then check the returned status code. If it's OK (200), it will 
-        /// parse the response and show the list of containers found.
+        /// Insere um arquivo - https://msdn.microsoft.com/pt-br/library/azure/dd179451.aspx
         /// </summary>
-        private static async Task ListContainersAsyncREST(string storageAccountName, string storageAccountKey, CancellationToken cancellationToken)
+        /// <param name="containerName"></param>
+        /// <param name="blobName"></param>
+        private static void PutBlob(String containerName, string blobName)
         {
-            HttpClientHandler handler = new HttpClientHandler()
+           
+            const string requestMethod = "PUT";
+
+            var urlPath = String.Format("{0}/{1}", containerName, blobName);
+            const string storageServiceVersion = "2017-11-09";
+
+            var dateInRfc1123Format = DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture);
+
+            var blobContent = File.ReadAllBytes(ConfigurationManager.AppSettings["filePath"]);
+            var blobLength = blobContent.Length;
+
+            const String blobType = "BlockBlob";
+
+            var canonicalizedHeaders = String.Format(
+                    "x-ms-blob-type:{0}\nx-ms-date:{1}\nx-ms-version:{2}",
+                    blobType,
+                    dateInRfc1123Format,
+                    storageServiceVersion);
+
+            var canonicalizedResource = String.Format("/{0}/{1}", ACCOUNT_NAME, urlPath);
+
+            var stringToSign = String.Format("{0}\n\n\n{1}\n\n\n\n\n\n\n\n\n{2}\n{3}",
+                    requestMethod,
+                    blobLength,
+                    canonicalizedHeaders,
+                    canonicalizedResource);
+
+            var authorizationHeader = CreateAuthorizationHeader(stringToSign);
+
+            var uri = new Uri(STORAGE_ENDPOINT + urlPath);
+
+            var request = (HttpWebRequest)WebRequest.Create(uri);
+
+            request.Method = requestMethod;
+
+            request.Headers.Add("x-ms-blob-type", blobType);
+            request.Headers.Add("x-ms-date", dateInRfc1123Format);
+            request.Headers.Add("x-ms-version", storageServiceVersion);
+            request.Headers.Add("Authorization", authorizationHeader);
+
+            request.ContentLength = blobLength;
+
+            using (var requestStream = request.GetRequestStream())
             {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            };
-
-            using (var client = new HttpClient(handler))
-            {
-
-                var response = await client.GetAsync($"https://sigmaiotexercisetest.blob.core.windows.net/api/v1/devices/testdevice/data/2018-09-18/temperature");
-
-                var result = await response.Content.ReadAsStringAsync();
-
-                
+                requestStream.Write(blobContent, 0, blobLength);
             }
-            // Construct the URI. This will look like this:
-            //   https://myaccount.blob.core.windows.net/resource
-            String uri = string.Format("http://{0}.blob.core.windows.net/api/v1/devices/{1}/2018-09-18/{2}", storageAccountName, deviceId, sensorType);
-            // Set this to whatever payload you desire. Ours is null because 
-            //   we're not passing anything in.
-            Byte[] requestPayload = null;
 
-            //Instantiate the request message with a null payload.
-            using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, uri)
-            { Content = (requestPayload == null) ? null : new ByteArrayContent(requestPayload) })
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
-                // Add the request headers for x-ms-date and x-ms-version.
-                DateTime now = DateTime.UtcNow;
-                httpRequestMessage.Headers.Add("x-ms-date", now.ToString("R", CultureInfo.InvariantCulture));
-                httpRequestMessage.Headers.Add("x-ms-version", "2018-09-18");
-             
-                // If you need any additional headers, add them here before creating
-                //   the authorization header. 
+                var eTag = response.Headers["ETag"];
+            }
+        }
 
-                // Add the authorization header.
-                httpRequestMessage.Headers.Authorization = AzureStorageAuthenticationHelper.GetAuthorizationHeader(
-                   storageAccountName, storageAccountKey, now, httpRequestMessage);
+        /// <summary>
+        /// Listar arquivos de um container - https://msdn.microsoft.com/pt-br/library/azure/dd135734.aspx
+        /// </summary>
+        /// <param name="containerName"></param>
+        public static void ListBlobs(String containerName)
+        {
+            const string requestMethod = "GET";
 
-                // Send the request.
-                using (HttpResponseMessage httpResponseMessage = await new HttpClient().SendAsync(httpRequestMessage, cancellationToken))
+            var urlPath = String.Format("restype=containner&comp=list");
+
+            const string storageServiceVersion = "2017-11-09";
+
+            var dateInRfc1123Format = DateTime.UtcNow.ToString("R", CultureInfo.InvariantCulture);
+
+            var canonicalizedHeaders = String.Format(
+                    "x-ms-date:{0}\nx-ms-version:{1}",
+                    dateInRfc1123Format,
+                    storageServiceVersion);
+
+            var canonicalizedResource = String.Format("/{0}/{1}{2}", ACCOUNT_NAME, containerName, "\ncomp:list\nrestype:container");
+
+            var stringToSign = String.Format("{0}\n\n\n\n\n\n\n\n\n\n\n\n{1}\n{2}",
+                    requestMethod,
+                    canonicalizedHeaders,
+                    canonicalizedResource);
+
+            var authorizationHeader = CreateAuthorizationHeader(stringToSign);
+
+            var uri = new Uri(STORAGE_ENDPOINT + containerName + "?" + urlPath);
+
+            var request = (HttpWebRequest)WebRequest.Create(uri);
+
+            request.Method = requestMethod;
+
+            request.Headers.Add("x-ms-date", dateInRfc1123Format);
+            request.Headers.Add("x-ms-version", storageServiceVersion);
+            request.Headers.Add("Authorization", authorizationHeader);
+
+            using (var response = (HttpWebResponse)request.GetResponse())
+            {
+                using (var stream = response.GetResponseStream())
                 {
-                    // If successful (status code = 200), 
-                    //   parse the XML response for the container names.
-                    if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
-                    {
-                        String xmlString = await httpResponseMessage.Content.ReadAsStringAsync();
-                        XElement x = XElement.Parse(xmlString);
-                        foreach (XElement container in x.Element("Containers").Elements("Container"))
-                        {
-                            Console.WriteLine("Container name = {0}", container.Element("Name").Value);
-                        }
-                    }
+                    var reader = new StreamReader(stream, Encoding.UTF8);
+
+                    //XML RESPONSE
+                    var responseXml = reader.ReadToEnd();
                 }
             }
+        }
 
+        /// <summary>
+        /// Método que cria o header authorization
+        /// </summary>
+        /// <param name="canonicalizedString"></param>
+        /// <returns></returns>
+        public static String CreateAuthorizationHeader(String canonicalizedString)
+        {
+            string signature;
+
+            using (var hmacSha256 = new HMACSHA256(Convert.FromBase64String(STORAGE_ACCOUNT_KEY)))
+            {
+                var dataToHmac = Encoding.UTF8.GetBytes(canonicalizedString);
+                signature = Convert.ToBase64String(hmacSha256.ComputeHash(dataToHmac));
+            }
+
+            var authorizationHeader = String.Format(
+                CultureInfo.InvariantCulture,
+                "{0} {1}:{2}",
+                "SharedKey",
+                ACCOUNT_NAME,
+                signature
+            );
+
+            return authorizationHeader;
         }
     }
 }
